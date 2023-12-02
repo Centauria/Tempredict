@@ -5,7 +5,14 @@ import pandas as pd
 from torch.utils.data import TensorDataset, Dataset
 from asammdf import MDF
 
-channels = [
+in_channels = [
+    "SPEED",
+    "TORQUE",
+    "Temp_MotorCoilAve",
+    "Temp_MotorMagnetAve",
+]
+
+out_channels = [
     "SPEED",
     "TORQUE",
     "Temp_MotorCoilAve",
@@ -17,9 +24,10 @@ def dataset(filename, observe_timestep=1, prediction_timestep=1):
     _, ext = os.path.splitext(filename)
     if ext == ".mf4":
         f = MDF(filename)
-        df = f.to_dataframe(channels, raster="Temp_MotorMagnetAve")
-        obs = df.iloc[: df.shape[0] - prediction_timestep]
-        pre = df.iloc[observe_timestep:]
+        df_in = f.to_dataframe(in_channels, raster="Temp_MotorMagnetAve")
+        df_out = f.to_dataframe(out_channels, raster="Temp_MotorMagnetAve")
+        obs = df_in.iloc[:-prediction_timestep]
+        pre = df_out.iloc[observe_timestep:]
         return [(obs, pre)]
     elif ext == ".txt":
         op = []
@@ -64,14 +72,18 @@ class SerialDataset(Dataset):
 
         self.index = self.data[self.data.common.allow == 1].index.to_numpy()
         self.data = self.data.to_numpy()
+        self.in_channel_index = slice(1, 1 + len(in_channels))
+        self.out_channel_index = slice(
+            1 + len(in_channels), 1 + len(in_channels) + len(out_channels)
+        )
 
     def __len__(self):
         return self.index.shape[0]
 
     def __getitem__(self, index):
         i = self.index[index]
-        x = self.data[i : i + self.observe_timestep, 1:5]
-        y = self.data[i : i + self.prediction_timestep, 5:9]
+        x = self.data[i : i + self.observe_timestep, self.in_channel_index]
+        y = self.data[i : i + self.prediction_timestep, self.out_channel_index]
         return (
             torch.tensor(x, dtype=torch.float32),
             torch.tensor(y, dtype=torch.float32),
@@ -80,4 +92,4 @@ class SerialDataset(Dataset):
 
 def read(filename):
     f = MDF(filename).resample(raster="Temp_MotorMagnetAve")
-    return np.array([x.samples for x in f.select(channels)]).T
+    return np.array([x.samples for x in f.select(in_channels)]).T
