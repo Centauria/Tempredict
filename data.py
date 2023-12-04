@@ -8,20 +8,13 @@ from asammdf import MDF
 in_channels = [
     "SPEED",
     "TORQUE",
-    "EMCS_D_IDACT",
-    "EMCS_D_IQACT",
-    "ESS1_ACT_I",
     "ESS1_ACT_U",
     "Temp_MotorCoilAve",
     "Temp_MotorMagnetAve",
-    "Temp_MotorBearingAve"
+    "Temp_MotorBearingAve",
 ]
 
-out_channels = [
-    "Temp_MotorCoilAve",
-    "Temp_MotorMagnetAve",
-    "Temp_MotorBearingAve"
-]
+out_channels = ["Temp_MotorCoilAve", "Temp_MotorMagnetAve", "Temp_MotorBearingAve"]
 
 
 def dataset(filename, observe_timestep=1, prediction_timestep=1):
