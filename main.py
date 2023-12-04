@@ -36,15 +36,18 @@ if __name__ == "__main__":
     loader_train = DataLoader(dataset_train, batch_size=256, shuffle=True)
     loader_test = DataLoader(dataset_test, batch_size=256, shuffle=True)
 
+    model.to('cuda')
+
     with tqdm(range(args.epochs)) as bar:
         for n in bar:
             for i, (x, y) in enumerate(loader_train):
-                output = model(x)
-                loss = criterion(output, y)
+                output = model(x.to('cuda'))
+                # print(x.shape, output.shape, y.shape)
+                loss = criterion(output, y.to('cuda'))
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
-                bar.set_description(f"Epoch: {n}, Iter: {i} loss: {loss.item():.3f} ")
+                bar.set_description(f"Epoch: {n}, Iter: {i} loss: {loss.detach().cpu().item():.3f} ")
 
     os.makedirs(os.path.dirname(args.output_model_path), exist_ok=True)
     torch.save(model, args.output_model_path)
@@ -52,7 +55,7 @@ if __name__ == "__main__":
     model.eval()
     loss = 0
     for x, y in loader_test:
-        output = model(x)
-        loss += criterion(output, y)
+        output = model(x.to('cuda'))
+        loss += criterion(output, y.to('cuda')).detach().cpu().item()
     loss /= len(loader_test)
     print(f"Test loss: {loss}")

@@ -26,8 +26,11 @@ if __name__ == "__main__":
 
         print(predict.shape)
 
-        for i in range(2):
-            plt.plot(predict[:, 0, 2 + i])
-            plt.plot(test_data[10 + 0 :, 2 + i])
+        for i in range(3):
+            plt.plot(predict[:, 0, i])
 
+        plt.show()
+
+        for i in range(3):
+            plt.plot(test_data[10 + 0 :, 6 + i])
         plt.show()

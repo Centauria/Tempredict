@@ -8,15 +8,19 @@ from asammdf import MDF
 in_channels = [
     "SPEED",
     "TORQUE",
+    "EMCS_D_IDACT",
+    "EMCS_D_IQACT",
+    "ESS1_ACT_I",
+    "ESS1_ACT_U",
     "Temp_MotorCoilAve",
     "Temp_MotorMagnetAve",
+    "Temp_MotorBearingAve"
 ]
 
 out_channels = [
-    "SPEED",
-    "TORQUE",
     "Temp_MotorCoilAve",
     "Temp_MotorMagnetAve",
+    "Temp_MotorBearingAve"
 ]
 
 
@@ -92,4 +96,4 @@ class SerialDataset(Dataset):
 
 def read(filename):
     f = MDF(filename).resample(raster="Temp_MotorMagnetAve")
-    return np.array([x.samples for x in f.select(in_channels)]).T
+    return np.array([x.samples for x in f.select(in_channels)], dtype=np.float32).T
