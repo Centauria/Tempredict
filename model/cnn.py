@@ -1,14 +1,16 @@
 from torch import nn, optim
+from time2vec import SineActivation
 
 
 class Model(nn.Module):
     def __init__(self, observe_timestep, prediction_timestep, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.t2v = SineActivation(6, 32)
         self.cnn = nn.Sequential(
-            nn.LayerNorm([6, observe_timestep]),
-            nn.ConvTranspose1d(6, 16, 12 - observe_timestep),
+            nn.LayerNorm([32, observe_timestep]),
+            nn.ConvTranspose1d(32, 32, 12 - observe_timestep),
             nn.SELU(),
-            nn.ConvTranspose1d(16, 32, 3),
+            nn.ConvTranspose1d(32, 32, 3),
             nn.BatchNorm1d(32),
             nn.SELU(),
             nn.Conv1d(32, 64, 7),
@@ -20,6 +22,7 @@ class Model(nn.Module):
         )
 
     def forward(self, x):
+        x = self.t2v(x)
         x = x.transpose(1, 2)
         x = self.cnn(x)
         x = x.transpose(1, 2)
