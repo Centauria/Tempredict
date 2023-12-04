@@ -5,6 +5,7 @@ class Model(nn.Module):
     def __init__(self, observe_timestep, prediction_timestep, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.cnn = nn.Sequential(
+            nn.LayerNorm([6, observe_timestep]),
             nn.ConvTranspose1d(6, 16, 12 - observe_timestep),
             nn.SELU(),
             nn.ConvTranspose1d(16, 32, 3),
