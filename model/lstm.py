@@ -21,7 +21,7 @@ class Model(nn.Module):
         # output: (batch, seq_len, hidden_size)
         # hidden: (1, hidden_size)
         # x_last_frame = x[:, -1, :].repeat(1, self.prediction_timestep, 1)
-        zero_input = torch.zeros(x.shape[0], self.prediction_timestep, x.shape[2])
+        zero_input = torch.zeros(x.shape[0], self.prediction_timestep, x.shape[2], device=x.device)
         output, _ = self.rnn(zero_input, hidden)
         output = self.fc(output)
         return output
