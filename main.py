@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 from data import dataset, SerialDataset
-from model.cnn import model, criterion, optimizer
+from model.lstm import model, criterion, optimizer
 
 
 if __name__ == "__main__":
