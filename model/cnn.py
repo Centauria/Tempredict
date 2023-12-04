@@ -5,29 +5,27 @@ class Model(nn.Module):
     def __init__(self, observe_timestep, prediction_timestep, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.cnn = nn.Sequential(
-            nn.ConvTranspose2d(9, 8, (11 - observe_timestep, 10)),
+            nn.ConvTranspose1d(9, 8, 11 - observe_timestep),
             nn.ReLU(),
-            nn.ConvTranspose2d(8, 16, 3),
+            nn.ConvTranspose1d(8, 16, 3),
             nn.ReLU(),
-            nn.ConvTranspose2d(16, 32, 3),
+            nn.ConvTranspose1d(16, 32, 3),
             nn.ReLU(),
-            nn.Conv2d(32, 64, 5),
+            nn.Conv1d(32, 64, 5),
             nn.ReLU(),
-            nn.Conv2d(64, 64, 5),
+            nn.Conv1d(64, 64, 5),
             nn.ReLU(),
-            nn.Conv2d(64, 128, 4),
+            nn.Conv1d(64, 128, 4),
             nn.ReLU(),
-            nn.Conv2d(128, 128, 3),
+            nn.Conv1d(128, 128, 3),
             nn.ReLU(),
-            nn.ConvTranspose2d(128, 3, (prediction_timestep, 1)),
+            nn.ConvTranspose1d(128, 3, prediction_timestep),
         )
 
     def forward(self, x):
         x = x.transpose(1, 2)
-        x.unsqueeze_(-1)
         x = self.cnn(x)
-        x.squeeze_(-1)
-        x.transpose_(1, 2)
+        x = x.transpose(1, 2)
         return x
 
 
