@@ -52,9 +52,9 @@ class Model(nn.Module):
             nn.Linear(128, token_dim),
             nn.ReLU(),
         )
-        self.itrans_blocks = [
+        self.itrans_blocks = nn.ModuleList([
             ITransformerBlock(variate_num, token_dim, heads) for _ in range(block_num)
-        ]
+        ])
         self.mlp_transform = nn.Sequential(
             nn.Linear(variate_num + condition_num, 128),
             nn.ReLU(),
