@@ -96,6 +96,6 @@ class Model(nn.Module):
         return x
 
 
-model = Model(10, 10, 3, 3)
+model = Model(3, 50, 3, 3)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
