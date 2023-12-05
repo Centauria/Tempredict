@@ -19,7 +19,9 @@ if __name__ == "__main__":
         test_data = torch.tensor(data.read(fn))
 
         print(test_data.shape)
-        test_x = torch.stack([test_data[i : -2 * 10 + i + 1] for i in range(10)], dim=1)
+        test_x = torch.stack(
+            [test_data[i : -2 * 10 + i + 1, 3:] for i in range(10)], dim=1
+        )
         print(test_x.shape)
 
         predict = model(test_x).detach()
