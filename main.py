@@ -41,15 +41,15 @@ if __name__ == "__main__":
         args.train_data,
         prediction_channels,
         condition_channels,
-        observe_timestep=10,
-        prediction_timestep=10,
+        observe_timestep=3,
+        prediction_timestep=50,
     )
     dataset_test = SerialDataset(
         args.test_data,
         prediction_channels,
         condition_channels,
-        observe_timestep=10,
-        prediction_timestep=10,
+        observe_timestep=3,
+        prediction_timestep=50,
     )
 
     print(len(dataset_train), len(dataset_test))
