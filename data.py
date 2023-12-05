@@ -104,8 +104,3 @@ class SerialDataset(Dataset):
             torch.tensor(y, dtype=torch.float32),
             torch.tensor(z, dtype=torch.float32),
         )
-
-
-def read(filename):
-    f = MDF(filename).resample(raster="Temp_MotorMagnetAve")
-    return np.array([x.samples for x in f.select(in_channels)], dtype=np.float32).T
