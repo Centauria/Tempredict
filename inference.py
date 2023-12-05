@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import data
+from main import prediction_channels, condition_channels
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("inference")
@@ -16,19 +17,24 @@ if __name__ == "__main__":
 
     for fn in args.data:
         print(f"Processing {fn}")
-        test_data = torch.tensor(data.read(fn))
-
-        print(test_data.shape)
-        test_x = torch.stack(
-            [test_data[i : -2 * 10 + i + 1, 3:] for i in range(10)], dim=1
+        test_data = data.SerialDataset(
+            fn, prediction_channels, condition_channels, 10, 10
         )
-        print(test_x.shape)
 
-        predict = model(test_x).detach()
+        y_real = []
+        y_pred = []
+        for i in range(len(test_data)):
+            x, y, z = test_data[i]
 
-        print(predict.shape)
+            predict = model(x.unsqueeze(0), z.unsqueeze(0)).detach()
+
+            y_real.append(y[9, :])
+            y_pred.append(predict[0, 9, :])
+
+        y_real = np.array(y_real)
+        y_pred = np.array(y_pred)
 
         for i in range(3):
-            plt.plot(predict[:, 9, i])
-            plt.plot(test_data[10 + 9 :, 3 + i])
+            plt.plot(y_pred[:, i])
+            plt.plot(y_real[:, i])
             plt.show()
