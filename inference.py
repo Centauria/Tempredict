@@ -16,10 +16,12 @@ if __name__ == "__main__":
     model: torch.nn.Module = torch.load(args.model_path, map_location="cpu")
     model.eval()
 
+    prediction_timestep = 50
+
     for fn in args.data:
         print(f"Processing {fn}")
         test_data = data.SerialDataset(
-            fn, prediction_channels, condition_channels, 3, 50
+            fn, prediction_channels, condition_channels, 3, prediction_timestep
         )
 
         y_real = []
@@ -29,8 +31,8 @@ if __name__ == "__main__":
 
             predict = model(x.unsqueeze(0), z.unsqueeze(0)).detach()
 
-            y_real.append(y[9, :])
-            y_pred.append(predict[0, 9, :])
+            y_real.append(y[prediction_timestep - 1, :])
+            y_pred.append(predict[0, prediction_timestep - 1, :])
 
         y_real = np.array(y_real)
         y_pred = np.array(y_pred)
