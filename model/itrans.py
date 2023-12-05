@@ -27,6 +27,7 @@ class Model(nn.Module):
         input_length,
         predict_length,
         variate_num,
+        condition_num,
         token_dim=128,
         heads=32,
         block_num=4,
@@ -43,9 +44,25 @@ class Model(nn.Module):
             nn.Linear(128, token_dim),
             nn.ReLU(),
         )
+        self.mlp_cond = nn.Sequential(
+            nn.Linear(predict_length, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, token_dim),
+            nn.ReLU(),
+        )
         self.itrans_blocks = [
             ITransformerBlock(variate_num, token_dim, heads) for _ in range(block_num)
         ]
+        self.mlp_transform = nn.Sequential(
+            nn.Linear(variate_num + condition_num, 128),
+            nn.ReLU(),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Linear(64, variate_num),
+            nn.ReLU(),
+        )
         self.mlp_out = nn.Sequential(
             nn.Linear(token_dim, 128),
             nn.ReLU(),
@@ -54,14 +71,23 @@ class Model(nn.Module):
             nn.Linear(128, predict_length),
         )
 
-    def forward(self, x):
+    def forward(self, x, z):
         # x: (batch, T, N)
+        # z: (batch, S, M)
         x = x.transpose(1, 2)
+        z = z.transpose(1, 2)
         # x: (batch, N, T)
+        # z: (batch, M, S)
         x = self.mlp(x)
+        z = self.mlp_cond(z)
         # x: (batch, N, D)
+        # z: (batch, M, D)
         for block in self.itrans_blocks:
             x = block(x)
+        # x: (batch, N, D)
+        x = torch.cat([x, z], 1).transpose(1, 2)
+        # x: (batch, D, N+M)
+        x = self.mlp_transform(x).transpose(1, 2)
         # x: (batch, N, D)
         x = self.mlp_out(x)
         # x: (batch, N, S)
@@ -70,6 +96,6 @@ class Model(nn.Module):
         return x
 
 
-model = Model(10, 10, 3)
+model = Model(10, 10, 3, 3)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)

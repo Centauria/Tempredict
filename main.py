@@ -8,6 +8,18 @@ from data import dataset, SerialDataset
 from model.itrans import model, criterion, optimizer
 
 
+condition_channels = [
+    "SPEED",
+    "TORQUE",
+    "ESS1_ACT_U",
+]
+
+prediction_channels = [
+    "Temp_MotorCoilAve",
+    "Temp_MotorMagnetAve",
+    "Temp_MotorBearingAve",
+]
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("temp_predict")
     parser.add_argument(
@@ -26,10 +38,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     dataset_train = SerialDataset(
-        args.train_data, observe_timestep=10, prediction_timestep=10
+        args.train_data,
+        prediction_channels,
+        condition_channels,
+        observe_timestep=10,
+        prediction_timestep=10,
     )
     dataset_test = SerialDataset(
-        args.test_data, observe_timestep=10, prediction_timestep=10
+        args.test_data,
+        prediction_channels,
+        condition_channels,
+        observe_timestep=10,
+        prediction_timestep=10,
     )
 
     print(len(dataset_train), len(dataset_test))
@@ -43,8 +63,8 @@ if __name__ == "__main__":
 
     with tqdm(range(args.epochs)) as bar:
         for n in bar:
-            for i, (x, y) in enumerate(loader_train):
-                output = model(x.to(device))
+            for i, (x, y, z) in enumerate(loader_train):
+                output = model(x.to(device), z.to(device))
                 # print(x.shape, output.shape, y.shape)
                 loss = criterion(output, y.to(device))
                 loss.backward()
@@ -59,8 +79,8 @@ if __name__ == "__main__":
 
     model.eval()
     loss = 0
-    for x, y in loader_test:
-        output = model(x.to(device))
+    for x, y, z in loader_test:
+        output = model(x.to(device), z.to(device))
         loss += criterion(output, y.to(device)).detach().cpu().item()
     loss /= len(loader_test)
     print(f"Test loss: {loss}")
