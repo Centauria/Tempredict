@@ -5,24 +5,23 @@ import pandas as pd
 from torch.utils.data import TensorDataset, Dataset
 from asammdf import MDF
 
-in_channels = [
-    "SPEED",
-    "TORQUE",
-    "ESS1_ACT_U",
-    "Temp_MotorCoilAve",
-    "Temp_MotorMagnetAve",
-    "Temp_MotorBearingAve",
-]
 
-out_channels = ["Temp_MotorCoilAve", "Temp_MotorMagnetAve", "Temp_MotorBearingAve"]
-
-
-def dataset(filename, observe_timestep=1, prediction_timestep=1):
+def dataset(
+    filename,
+    observe_channels,
+    prediction_channels,
+    observe_timestep=1,
+    prediction_timestep=1,
+):
     _, ext = os.path.splitext(filename)
     if ext == ".mf4":
         f = MDF(filename)
-        df_in = f.to_dataframe(in_channels, raster="Temp_MotorMagnetAve")
-        df_out = f.to_dataframe(out_channels, raster="Temp_MotorMagnetAve")
+        df_in = f.to_dataframe(observe_channels, raster="Temp_MotorMagnetAve").reindex(
+            columns=observe_channels
+        )
+        df_out = f.to_dataframe(
+            prediction_channels, raster="Temp_MotorMagnetAve"
+        ).reindex(columns=prediction_channels)
         obs = df_in.iloc[:-prediction_timestep]
         pre = df_out.iloc[observe_timestep:]
         return [(obs, pre)]
@@ -32,7 +31,13 @@ def dataset(filename, observe_timestep=1, prediction_timestep=1):
             for line in config_file.readlines():
                 if line != "":
                     op.extend(
-                        dataset(line.rstrip(), observe_timestep, prediction_timestep)
+                        dataset(
+                            line.rstrip(),
+                            observe_channels,
+                            prediction_channels,
+                            observe_timestep,
+                            prediction_timestep,
+                        )
                     )
         return op
     else:
@@ -40,8 +45,19 @@ def dataset(filename, observe_timestep=1, prediction_timestep=1):
 
 
 class SerialDataset(Dataset):
-    def __init__(self, filename, observe_timestep=1, prediction_timestep=1) -> None:
-        data = dataset(filename, observe_timestep, prediction_timestep)
+    def __init__(
+        self,
+        filename,
+        prediction_channels,
+        condition_channels,
+        observe_timestep=1,
+        prediction_timestep=1,
+    ) -> None:
+        in_channels = prediction_channels
+        out_channels = prediction_channels + condition_channels
+        data = dataset(
+            filename, in_channels, out_channels, observe_timestep, prediction_timestep
+        )
         self.data = None
         self.observe_timestep = observe_timestep
         self.prediction_timestep = prediction_timestep
@@ -70,9 +86,10 @@ class SerialDataset(Dataset):
         self.index = self.data[self.data.common.allow == 1].index.to_numpy()
         self.data = self.data.to_numpy()
         self.in_channel_index = slice(1, 1 + len(in_channels))
-        self.out_channel_index = slice(
-            1 + len(in_channels), 1 + len(in_channels) + len(out_channels)
+        self.prediction_channel_index = slice(
+            1 + len(in_channels), 1 + len(in_channels) + len(prediction_channels)
         )
+        self.condition_channel_index = slice(-len(condition_channels), None)
 
     def __len__(self):
         return self.index.shape[0]
@@ -80,10 +97,12 @@ class SerialDataset(Dataset):
     def __getitem__(self, index):
         i = self.index[index]
         x = self.data[i : i + self.observe_timestep, self.in_channel_index]
-        y = self.data[i : i + self.prediction_timestep, self.out_channel_index]
+        y = self.data[i : i + self.prediction_timestep, self.prediction_channel_index]
+        z = self.data[i : i + self.prediction_timestep, self.condition_channel_index]
         return (
             torch.tensor(x, dtype=torch.float32),
             torch.tensor(y, dtype=torch.float32),
+            torch.tensor(z, dtype=torch.float32),
         )
 
 
