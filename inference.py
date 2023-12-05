@@ -2,6 +2,7 @@ import torch
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 import data
 from main import prediction_channels, condition_channels
@@ -18,12 +19,12 @@ if __name__ == "__main__":
     for fn in args.data:
         print(f"Processing {fn}")
         test_data = data.SerialDataset(
-            fn, prediction_channels, condition_channels, 10, 10
+            fn, prediction_channels, condition_channels, 3, 50
         )
 
         y_real = []
         y_pred = []
-        for i in range(len(test_data)):
+        for i in tqdm(range(len(test_data))):
             x, y, z = test_data[i]
 
             predict = model(x.unsqueeze(0), z.unsqueeze(0)).detach()
