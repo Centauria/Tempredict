@@ -2,7 +2,11 @@ from typing import Any, Union, Sequence
 
 import torch
 from lightning import Callback
-from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.callbacks import (
+    ModelCheckpoint,
+    EarlyStopping,
+    LearningRateMonitor,
+)
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 from torch import nn, optim
 import lightning as L
@@ -57,9 +61,7 @@ class Model(nn.Module):
             [ITransformerBlock(variate_num, token_dim, heads) for _ in range(block_num)]
         )
         self.mlp_transform = nn.Sequential(
-            nn.Linear(variate_num + condition_num, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
+            nn.Linear(variate_num + condition_num, 64),
             nn.ReLU(),
             nn.Linear(64, variate_num),
             nn.ReLU(),
@@ -148,17 +150,18 @@ class ITransModel(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": optim.lr_scheduler.ReduceLROnPlateau(
+                "scheduler": optim.lr_scheduler.CosineAnnealingLR(
                     optimizer,
-                    "min",
+                    100,
                 ),
                 "monitor": "val_loss",
-                "interval": "epoch",
-                "frequency": 1000,
+                "interval": "step",
+                "frequency": 10,
             },
         }
 
     def configure_callbacks(self) -> Union[Sequence[Callback], Callback]:
         early_stop = EarlyStopping(monitor="val_loss", mode="min")
         checkpoint = ModelCheckpoint(monitor="val_loss")
-        return [early_stop, checkpoint]
+        logging_lr = LearningRateMonitor(logging_interval="step")
+        return [early_stop, checkpoint, logging_lr]
