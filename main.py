@@ -43,14 +43,14 @@ if __name__ == "__main__":
         args.train_data,
         prediction_channels,
         condition_channels,
-        observe_timestep=3,
+        observe_timestep=1,
         prediction_timestep=50,
     )
     dataset_test = SerialDataset(
         args.test_data,
         prediction_channels,
         condition_channels,
-        observe_timestep=3,
+        observe_timestep=1,
         prediction_timestep=50,
     )
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     device = 0 if torch.cuda.is_available() and args.cuda else "cpu"
 
-    model_lightning = ITransModel(3, 50, 3, 3)
+    model_lightning = ITransModel(1, 50, 3, 3)
     trainer = Trainer(
         val_check_interval=500,
         max_epochs=20,

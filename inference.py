@@ -17,12 +17,13 @@ if __name__ == "__main__":
     model = ITransModel.load_from_checkpoint(args.model_path, map_location="cpu")
     model.eval()
 
+    observe_timestep = model.hparams.input_length
     prediction_timestep = model.hparams.predict_length
 
     for fn in args.data:
         print(f"Processing {fn}")
         test_data = data.SerialDataset(
-            fn, prediction_channels, condition_channels, 3, prediction_timestep
+            fn, prediction_channels, condition_channels, observe_timestep, prediction_timestep
         )
 
         y_real = []
