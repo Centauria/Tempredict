@@ -150,10 +150,7 @@ class ITransModel(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": optim.lr_scheduler.CosineAnnealingLR(
-                    optimizer,
-                    100,
-                ),
+                "scheduler": optim.lr_scheduler.CosineAnnealingLR(optimizer, 100, 1e-6),
                 "monitor": "val_loss",
                 "interval": "step",
                 "frequency": 10,

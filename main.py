@@ -92,6 +92,6 @@ if __name__ == "__main__":
         default_root_dir="checkpoints",
     )
     tuner = Tuner(trainer)
-    tuner.lr_find(model_lightning, loader_train, loader_valid)
+    tuner.lr_find(model_lightning, loader_train, loader_valid, min_lr=1e-5, max_lr=1e-3)
     trainer.fit(model_lightning, loader_train, loader_valid)
     trainer.test(model_lightning, loader_test)
