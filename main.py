@@ -1,12 +1,13 @@
 import os
 import argparse
 import torch
+from lightning import Trainer
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
+import torch.utils.data as data
 
 from data import dataset, SerialDataset
-from model.itrans import model, criterion, optimizer
-
+from model.itrans import ITransModel
 
 condition_channels = [
     "SPEED",
@@ -54,33 +55,17 @@ if __name__ == "__main__":
 
     print(len(dataset_train), len(dataset_test))
 
+    train_set_size = int(len(dataset_train) * 0.8)
+    valid_set_size = len(dataset_train) - train_set_size
+    seed = torch.Generator().manual_seed(42)
+    dataset_train, dataset_valid = data.random_split(dataset_train, [train_set_size, valid_set_size], generator=seed)
+
     loader_train = DataLoader(dataset_train, batch_size=256, shuffle=True)
     loader_test = DataLoader(dataset_test, batch_size=256, shuffle=True)
+    loader_valid = DataLoader(dataset_valid, batch_size=256)
 
-    device = "cuda:0" if torch.cuda.is_available() and args.cuda else "cpu"
+    device = 0 if torch.cuda.is_available() and args.cuda else "cpu"
 
-    model.to(device)
-
-    with tqdm(range(args.epochs)) as bar:
-        for n in bar:
-            for i, (x, y, z) in enumerate(loader_train):
-                output = model(x.to(device), z.to(device))
-                # print(x.shape, output.shape, y.shape)
-                loss = criterion(output, y.to(device))
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
-                bar.set_description(
-                    f"Epoch: {n}, Iter: {i} loss: {loss.detach().cpu().item():.3f} "
-                )
-
-    os.makedirs(os.path.dirname(args.output_model_path), exist_ok=True)
-    torch.save(model, args.output_model_path)
-
-    model.eval()
-    loss = 0
-    for x, y, z in loader_test:
-        output = model(x.to(device), z.to(device))
-        loss += criterion(output, y.to(device)).detach().cpu().item()
-    loss /= len(loader_test)
-    print(f"Test loss: {loss}")
+    model_lightning = ITransModel(3, 50, 3, 3)
+    trainer = Trainer(default_root_dir='checkpoints', val_check_interval=1000)
+    trainer.fit(model_lightning, loader_train, loader_valid)

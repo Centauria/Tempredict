@@ -1,5 +1,11 @@
+from typing import Any, Union, Sequence
+
 import torch
+from lightning import Callback
+from lightning.pytorch.callbacks import ModelCheckpoint, EarlyStopping
+from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 from torch import nn, optim
+import lightning as L
 
 from time2vec import SineActivation
 
@@ -25,16 +31,16 @@ class ITransformerBlock(nn.Module):
 
 class Model(nn.Module):
     def __init__(
-        self,
-        input_length,
-        predict_length,
-        variate_num,
-        condition_num,
-        token_dim=128,
-        heads=32,
-        block_num=4,
-        *args,
-        **kwargs
+            self,
+            input_length,
+            predict_length,
+            variate_num,
+            condition_num,
+            token_dim=128,
+            heads=32,
+            block_num=4,
+            *args,
+            **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
 
@@ -91,6 +97,49 @@ class Model(nn.Module):
         return x
 
 
-model = Model(3, 50, 3, 3)
-criterion = nn.MSELoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-4)
+class ITransModel(L.LightningModule):
+    def __init__(self, input_length, predict_length, variate_num, condition_num, lr=1e-4, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
+        self.model = Model(input_length, predict_length, variate_num, condition_num)
+        self.criterion = nn.MSELoss()
+        self.lr = lr
+        self.save_hyperparameters()
+
+    def training_step(self, batch, batch_index, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+        x, y, z = batch
+        output = self.model(x, z)
+        loss = self.criterion(output, y)
+        return loss
+
+    def test_step(self, batch, batch_index, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+        loss = self._shared_eval_step(batch, batch_index)
+        self.log('test_loss', loss)
+        return
+
+    def validation_step(self, batch, batch_index, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+        loss = self._shared_eval_step(batch, batch_index)
+        self.log('val_loss', loss)
+        return
+
+    def _shared_eval_step(self, batch, batch_index):
+        x, y, z = batch
+        output = self.model(x, z)
+        loss = self.criterion(output, y)
+        return loss
+
+    def configure_optimizers(self) -> OptimizerLRScheduler:
+        optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min'),
+                'monitor': 'val_loss',
+                'interval': 'epoch',
+                'frequency': 1000,
+            }
+        }
+
+    def configure_callbacks(self) -> Union[Sequence[Callback], Callback]:
+        early_stop = EarlyStopping(monitor='val_loss', mode='min')
+        checkpoint = ModelCheckpoint(monitor="val_loss")
+        return [early_stop, checkpoint]
