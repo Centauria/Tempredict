@@ -33,7 +33,7 @@ if __name__ == "__main__":
         required=True,
         help="Specify training data in mf4 format",
     )
-    parser.add_argument("-o", "--output-model-path", required=True)
+    parser.add_argument("-o", "--output-model-path")
     parser.add_argument("-n", "--epochs", type=int, default=10)
     parser.add_argument("--cuda", action="store_true")
     args = parser.parse_args()
