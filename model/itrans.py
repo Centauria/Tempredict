@@ -158,7 +158,7 @@ class ITransModel(L.LightningModule):
         }
 
     def configure_callbacks(self) -> Union[Sequence[Callback], Callback]:
-        early_stop = EarlyStopping(monitor="val_loss", mode="min")
+        early_stop = EarlyStopping(monitor="val_loss", patience=5, mode="min")
         checkpoint = ModelCheckpoint(monitor="val_loss")
         logging_lr = LearningRateMonitor(logging_interval="step")
         return [early_stop, checkpoint, logging_lr]
