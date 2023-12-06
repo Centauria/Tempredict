@@ -2,6 +2,7 @@ import os
 import argparse
 import torch
 from lightning import Trainer
+from lightning.pytorch.tuner import Tuner
 from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 import torch.utils.data as data
@@ -84,11 +85,13 @@ if __name__ == "__main__":
 
     device = 0 if torch.cuda.is_available() and args.cuda else "cpu"
 
-    model_lightning = ITransModel(3, 50, 3, 3, 1e-5)
+    model_lightning = ITransModel(3, 50, 3, 3)
     trainer = Trainer(
-        default_root_dir="checkpoints",
-        val_check_interval=1000,
+        val_check_interval=500,
         max_epochs=20,
+        default_root_dir="checkpoints",
     )
+    tuner = Tuner(trainer)
+    tuner.lr_find(model_lightning, loader_train, loader_valid)
     trainer.fit(model_lightning, loader_train, loader_valid)
     trainer.test(model_lightning, loader_test)
