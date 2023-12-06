@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 import data
 from main import prediction_channels, condition_channels
+from model.itrans import ITransModel
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("inference")
@@ -13,10 +14,10 @@ if __name__ == "__main__":
     parser.add_argument("--data", nargs="+")
     args = parser.parse_args()
 
-    model: torch.nn.Module = torch.load(args.model_path, map_location="cpu")
+    model = ITransModel.load_from_checkpoint(args.model_path, map_location="cpu")
     model.eval()
 
-    prediction_timestep = 50
+    prediction_timestep = model.hparams.predict_length
 
     for fn in args.data:
         print(f"Processing {fn}")

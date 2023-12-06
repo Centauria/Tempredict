@@ -58,14 +58,37 @@ if __name__ == "__main__":
     train_set_size = int(len(dataset_train) * 0.8)
     valid_set_size = len(dataset_train) - train_set_size
     seed = torch.Generator().manual_seed(42)
-    dataset_train, dataset_valid = data.random_split(dataset_train, [train_set_size, valid_set_size], generator=seed)
+    dataset_train, dataset_valid = data.random_split(
+        dataset_train, [train_set_size, valid_set_size], generator=seed
+    )
 
-    loader_train = DataLoader(dataset_train, batch_size=256, shuffle=True)
-    loader_test = DataLoader(dataset_test, batch_size=256, shuffle=True)
-    loader_valid = DataLoader(dataset_valid, batch_size=256)
+    loader_train = DataLoader(
+        dataset_train,
+        batch_size=256,
+        shuffle=True,
+        num_workers=5,
+        persistent_workers=True,
+    )
+    loader_test = DataLoader(
+        dataset_test,
+        batch_size=256,
+        num_workers=5,
+        persistent_workers=True,
+    )
+    loader_valid = DataLoader(
+        dataset_valid,
+        batch_size=256,
+        num_workers=5,
+        persistent_workers=True,
+    )
 
     device = 0 if torch.cuda.is_available() and args.cuda else "cpu"
 
-    model_lightning = ITransModel(3, 50, 3, 3)
-    trainer = Trainer(default_root_dir='checkpoints', val_check_interval=1000)
+    model_lightning = ITransModel(3, 50, 3, 3, 1e-5)
+    trainer = Trainer(
+        default_root_dir="checkpoints",
+        val_check_interval=1000,
+        max_epochs=20,
+    )
     trainer.fit(model_lightning, loader_train, loader_valid)
+    trainer.test(model_lightning, loader_test)

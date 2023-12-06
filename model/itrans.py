@@ -31,16 +31,16 @@ class ITransformerBlock(nn.Module):
 
 class Model(nn.Module):
     def __init__(
-            self,
-            input_length,
-            predict_length,
-            variate_num,
-            condition_num,
-            token_dim=128,
-            heads=32,
-            block_num=4,
-            *args,
-            **kwargs
+        self,
+        input_length,
+        predict_length,
+        variate_num,
+        condition_num,
+        token_dim=128,
+        heads=32,
+        block_num=4,
+        *args,
+        **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
 
@@ -98,14 +98,28 @@ class Model(nn.Module):
 
 
 class ITransModel(L.LightningModule):
-    def __init__(self, input_length, predict_length, variate_num, condition_num, lr=1e-4, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        input_length,
+        predict_length,
+        variate_num,
+        condition_num,
+        lr=1e-4,
+        *args: Any,
+        **kwargs: Any
+    ):
         super().__init__(*args, **kwargs)
         self.model = Model(input_length, predict_length, variate_num, condition_num)
         self.criterion = nn.MSELoss()
         self.lr = lr
         self.save_hyperparameters()
 
-    def training_step(self, batch, batch_index, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+    def forward(self, *args: Any, **kwargs: Any) -> Any:
+        return self.model(*args)
+
+    def training_step(
+        self, batch, batch_index, *args: Any, **kwargs: Any
+    ) -> STEP_OUTPUT:
         x, y, z = batch
         output = self.model(x, z)
         loss = self.criterion(output, y)
@@ -113,12 +127,14 @@ class ITransModel(L.LightningModule):
 
     def test_step(self, batch, batch_index, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
         loss = self._shared_eval_step(batch, batch_index)
-        self.log('test_loss', loss)
+        self.log("test_loss", loss)
         return
 
-    def validation_step(self, batch, batch_index, *args: Any, **kwargs: Any) -> STEP_OUTPUT:
+    def validation_step(
+        self, batch, batch_index, *args: Any, **kwargs: Any
+    ) -> STEP_OUTPUT:
         loss = self._shared_eval_step(batch, batch_index)
-        self.log('val_loss', loss)
+        self.log("val_loss", loss)
         return
 
     def _shared_eval_step(self, batch, batch_index):
@@ -130,16 +146,19 @@ class ITransModel(L.LightningModule):
     def configure_optimizers(self) -> OptimizerLRScheduler:
         optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         return {
-            'optimizer': optimizer,
-            'lr_scheduler': {
-                'scheduler': optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min'),
-                'monitor': 'val_loss',
-                'interval': 'epoch',
-                'frequency': 1000,
-            }
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": optim.lr_scheduler.ReduceLROnPlateau(
+                    optimizer,
+                    "min",
+                ),
+                "monitor": "val_loss",
+                "interval": "epoch",
+                "frequency": 1000,
+            },
         }
 
     def configure_callbacks(self) -> Union[Sequence[Callback], Callback]:
-        early_stop = EarlyStopping(monitor='val_loss', mode='min')
+        early_stop = EarlyStopping(monitor="val_loss", mode="min")
         checkpoint = ModelCheckpoint(monitor="val_loss")
         return [early_stop, checkpoint]
