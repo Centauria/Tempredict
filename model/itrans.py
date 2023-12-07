@@ -56,7 +56,14 @@ class Model(nn.Module):
             nn.Linear(128, token_dim),
             nn.ReLU(),
         )
-        self.t2v = SineActivation(predict_length, token_dim)
+        self.t2v = nn.Sequential(
+            nn.Linear(predict_length, 128),
+            nn.ReLU(),
+            nn.Linear(128, 128),
+            nn.ReLU(),
+            nn.Linear(128, token_dim),
+            nn.ReLU(),
+        )
         self.itrans_blocks = nn.ModuleList(
             [ITransformerBlock(variate_num, token_dim, heads) for _ in range(block_num)]
         )
@@ -150,15 +157,15 @@ class ITransModel(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": optim.lr_scheduler.CosineAnnealingLR(optimizer, 100, 1e-6),
+                "scheduler": optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', 0.1, 8),
                 "monitor": "val_loss",
                 "interval": "step",
-                "frequency": 10,
+                "frequency": 500,
             },
         }
 
     def configure_callbacks(self) -> Union[Sequence[Callback], Callback]:
-        early_stop = EarlyStopping(monitor="val_loss", patience=5, mode="min")
+        early_stop = EarlyStopping(monitor="val_loss", patience=16, mode="min")
         checkpoint = ModelCheckpoint(monitor="val_loss")
         logging_lr = LearningRateMonitor(logging_interval="step")
         return [early_stop, checkpoint, logging_lr]
