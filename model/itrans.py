@@ -157,7 +157,9 @@ class ITransModel(L.LightningModule):
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
-                "scheduler": optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', 0.1, 8),
+                "scheduler": optim.lr_scheduler.ReduceLROnPlateau(
+                    optimizer, "min", 0.1, 8
+                ),
                 "monitor": "val_loss",
                 "interval": "step",
                 "frequency": 500,
