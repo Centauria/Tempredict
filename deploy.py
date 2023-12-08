@@ -1,7 +1,6 @@
 import argparse
 import torch
 import os
-import ncnn
 import shutil
 
 from model.itrans import ITransModel
@@ -9,7 +8,7 @@ from model.itrans import ITransModel
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("deploy")
     parser.add_argument("--checkpoint", "-c", required=True)
-    parser.add_argument("--output", "-o", default="model-ncnn")
+    parser.add_argument("--output", "-o", default="trained_models_ncnn")
     parser.add_argument("--pnnx-path", default="pnnx")
     args = parser.parse_args()
 
@@ -21,11 +20,11 @@ if __name__ == "__main__":
     os.makedirs("tmp", exist_ok=True)
     mod.save("tmp/model.pt")
 
-    os.system(
-        f"{args.pnnx_path} tmp/model.pt inputshape={','.join([list(v.shape) for v in (x, z)])}"
-    )
+    cmd = f"cd tmp && {args.pnnx_path} model.pt inputshape=\"{','.join([str(list(v.shape)) for v in (x, z)])}\""
+    print(cmd)
+    os.system(cmd)
 
     os.makedirs(args.output, exist_ok=True)
-    shutil.move("tmp/model.ncnn.param", args.output)
-    shutil.move("tmp/model.ncnn.param", args.output)
+    shutil.copy2("tmp/model.ncnn.param", args.output)
+    shutil.copy2("tmp/model.ncnn.bin", args.output)
     shutil.rmtree("tmp")
