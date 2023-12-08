@@ -11,8 +11,6 @@ from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 from torch import nn, optim
 import lightning as L
 
-from time2vec import SineActivation
-
 
 class ITransformerBlock(nn.Module):
     def __init__(self, variate_num, token_dim, heads, *args, **kwargs) -> None:
