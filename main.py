@@ -88,10 +88,10 @@ if __name__ == "__main__":
     model_lightning = ITransModel(1, 50, 3, 3)
     trainer = Trainer(
         val_check_interval=500,
-        max_epochs=20,
+        max_epochs=50,
         default_root_dir="checkpoints",
     )
-    tuner = Tuner(trainer)
-    tuner.lr_find(model_lightning, loader_train, loader_valid, min_lr=1e-5, max_lr=1e-3)
+    # tuner = Tuner(trainer)
+    # tuner.lr_find(model_lightning, loader_train, loader_valid, min_lr=1e-5, max_lr=1e-3)
     trainer.fit(model_lightning, loader_train, loader_valid)
     trainer.test(model_lightning, loader_test)
