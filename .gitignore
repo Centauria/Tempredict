@@ -160,6 +160,6 @@ cython_debug/
 .idea/
 
 trained_models*
-dataset_train.txt
+dataset_*.txt
 checkpoints
 lightning_logs
