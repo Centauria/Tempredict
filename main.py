@@ -36,6 +36,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("-o", "--output-model-path")
     parser.add_argument("-n", "--epochs", type=int, default=10)
+    parser.add_argument("--observe-timestep", type=int, default=1)
+    parser.add_argument("--prediction-timestep", type=int, default=50)
     parser.add_argument("--cuda", action="store_true")
     args = parser.parse_args()
 
@@ -43,15 +45,15 @@ if __name__ == "__main__":
         args.train_data,
         prediction_channels,
         condition_channels,
-        observe_timestep=1,
-        prediction_timestep=50,
+        observe_timestep=args.observe_timestep,
+        prediction_timestep=args.prediction_timestep,
     )
     dataset_test = SerialDataset(
         args.test_data,
         prediction_channels,
         condition_channels,
-        observe_timestep=1,
-        prediction_timestep=50,
+        observe_timestep=args.observe_timestep,
+        prediction_timestep=args.prediction_timestep,
     )
 
     print(len(dataset_train), len(dataset_test))
@@ -83,9 +85,12 @@ if __name__ == "__main__":
         persistent_workers=True,
     )
 
-    device = 0 if torch.cuda.is_available() and args.cuda else "cpu"
-
-    model_lightning = ITransModel(1, 50, 3, 3)
+    model_lightning = ITransModel(
+        args.observe_timestep,
+        args.prediction_timestep,
+        len(prediction_channels),
+        len(condition_channels),
+    )
     trainer = Trainer(
         val_check_interval=500,
         max_epochs=50,
