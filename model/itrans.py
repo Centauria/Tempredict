@@ -1,4 +1,4 @@
-from typing import Any, Union, Sequence
+from typing import Any, Union, Sequence, Optional
 
 import torch
 from lightning import Callback
@@ -31,6 +31,25 @@ class ITransformerBlock(nn.Module):
         return x
 
 
+def mlp_layers(
+        layer_num,
+        in_dim,
+        out_dim,
+        hidden_dim=128,
+        activation=nn.ReLU,
+        output_activation: Optional[type(nn.ReLU)] = nn.ReLU
+):
+    if layer_num <= 0:
+        raise ValueError("layer num must be > 0")
+    dim_list = [(in_dim, hidden_dim)] + [(hidden_dim, hidden_dim)] * (layer_num - 1)
+    layer_list = [[nn.Linear(*x), activation()] for x in dim_list]
+    layer_list = sum(layer_list, [])
+    layer_list.append(nn.Linear(hidden_dim, out_dim))
+    if output_activation is not None:
+        layer_list.append(output_activation())
+    return nn.Sequential(*layer_list)
+
+
 class Model(nn.Module):
     def __init__(
         self,
@@ -38,6 +57,7 @@ class Model(nn.Module):
         predict_length,
         variate_num,
         condition_num,
+        mlp_layer_num=2,
         token_dim=128,
         heads=32,
         block_num=4,
@@ -46,38 +66,13 @@ class Model(nn.Module):
     ) -> None:
         super().__init__(*args, **kwargs)
 
-        self.mlp = nn.Sequential(
-            nn.Linear(input_length, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, token_dim),
-            nn.ReLU(),
-        )
-        self.t2v = nn.Sequential(
-            nn.Linear(predict_length, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, token_dim),
-            nn.ReLU(),
-        )
+        self.mlp = mlp_layers(mlp_layer_num, input_length, token_dim)
+        self.t2v = mlp_layers(mlp_layer_num, predict_length, token_dim)
         self.itrans_blocks = nn.ModuleList(
             [ITransformerBlock(variate_num, token_dim, heads) for _ in range(block_num)]
         )
-        self.mlp_transform = nn.Sequential(
-            nn.Linear(variate_num + condition_num, 64),
-            nn.ReLU(),
-            nn.Linear(64, variate_num),
-            nn.ReLU(),
-        )
-        self.mlp_out = nn.Sequential(
-            nn.Linear(token_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, predict_length),
-        )
+        self.mlp_transform = mlp_layers(mlp_layer_num, variate_num + condition_num, variate_num)
+        self.mlp_out = mlp_layers(mlp_layer_num, token_dim, predict_length, output_activation=None)
 
     def forward(self, x, z):
         # x: (batch, T, N)
@@ -111,12 +106,13 @@ class ITransModel(L.LightningModule):
         predict_length,
         variate_num,
         condition_num,
+        mlp_layer_num,
         lr=1e-4,
         *args: Any,
         **kwargs: Any
     ):
         super().__init__(*args, **kwargs)
-        self.model = Model(input_length, predict_length, variate_num, condition_num)
+        self.model = Model(input_length, predict_length, variate_num, condition_num, mlp_layer_num)
         self.criterion = nn.MSELoss()
         self.lr = lr
         self.save_hyperparameters()
@@ -156,7 +152,7 @@ class ITransModel(L.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": optim.lr_scheduler.ReduceLROnPlateau(
-                    optimizer, "min", 0.5, 3
+                    optimizer, "min", 0.8, 3
                 ),
                 "monitor": "val_loss",
                 "interval": "step",
