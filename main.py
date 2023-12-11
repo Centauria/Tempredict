@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser.add_argument("--observe-timestep", type=int, default=1)
     parser.add_argument("--prediction-timestep", type=int, default=50)
     parser.add_argument("--mlp-layer-num", type=int, default=2)
+    parser.add_argument("--block-num", type=int, default=4)
     parser.add_argument("--cuda", action="store_true")
     args = parser.parse_args()
 
@@ -92,6 +93,7 @@ if __name__ == "__main__":
         len(prediction_channels),
         len(condition_channels),
         args.mlp_layer_num,
+        block_num=args.block_num,
     )
     trainer = Trainer(
         val_check_interval=500,

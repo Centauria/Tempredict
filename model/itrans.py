@@ -107,12 +107,13 @@ class ITransModel(L.LightningModule):
         variate_num,
         condition_num,
         mlp_layer_num,
+        block_num,
         lr=1e-4,
         *args: Any,
         **kwargs: Any
     ):
         super().__init__(*args, **kwargs)
-        self.model = Model(input_length, predict_length, variate_num, condition_num, mlp_layer_num)
+        self.model = Model(input_length, predict_length, variate_num, condition_num, mlp_layer_num, block_num=block_num)
         self.criterion = nn.MSELoss()
         self.lr = lr
         self.save_hyperparameters()
