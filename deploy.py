@@ -12,10 +12,10 @@ if __name__ == "__main__":
     parser.add_argument("--pnnx-path", default="pnnx")
     args = parser.parse_args()
 
-    itm = ITransModel.load_from_checkpoint(args.checkpoint, map_location="cpu")
+    itm: ITransModel = ITransModel.load_from_checkpoint(args.checkpoint, map_location="cpu")
     itm.eval()
-    x = torch.rand(1, 1, 3, dtype=torch.float32)
-    z = torch.rand(1, 50, 3, dtype=torch.float32)
+    x = torch.rand(1, itm.hparams.input_length, itm.hparams.variate_num, dtype=torch.float32)
+    z = torch.rand(1, itm.hparams.predict_length, itm.hparams.condition_num, dtype=torch.float32)
     mod = itm.to_torchscript(method="trace", example_inputs=(x, z))
     os.makedirs("tmp", exist_ok=True)
     mod.save("tmp/model.pt")
