@@ -14,6 +14,8 @@ condition_channels = [
     "SPEED",
     "TORQUE",
     "ESS1_ACT_U",
+    "WC_Act_TempIn2",
+    "WC_Act_TempOut2",
 ]
 
 prediction_channels = [

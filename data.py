@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from torch.utils.data import TensorDataset, Dataset
 from asammdf import MDF
+from asammdf.mdf import MdfException
 
 
 def dataset(
@@ -12,18 +13,30 @@ def dataset(
     prediction_channels,
     observe_timestep=1,
     prediction_timestep=1,
+    missing_channel_behavior="discard",
 ):
     _, ext = os.path.splitext(filename)
     if ext == ".mf4":
-        f = MDF(filename)
-        df_in = f.to_dataframe(observe_channels, raster="Temp_MotorMagnetAve").reindex(
-            columns=observe_channels
-        )
-        df_out = f.to_dataframe(
-            prediction_channels, raster="Temp_MotorMagnetAve"
-        ).reindex(columns=prediction_channels)
-        obs = df_in.iloc[:-prediction_timestep]
-        pre = df_out.iloc[observe_timestep:]
+        with MDF(filename) as f:
+            ch = set(f.channels_db.keys())
+            if ch.issuperset(observe_channels) and ch.issuperset(prediction_channels):
+                df_in = f.to_dataframe(
+                    observe_channels, raster="Temp_MotorMagnetAve"
+                ).reindex(columns=observe_channels)
+                df_out = f.to_dataframe(
+                    prediction_channels, raster="Temp_MotorMagnetAve"
+                ).reindex(columns=prediction_channels)
+            else:
+                if missing_channel_behavior == "discard":
+                    diff_ch = ch.difference(
+                        set(observe_channels).union(prediction_channels)
+                    )
+                    print(f"{filename} have no channel named {diff_ch}, ignored")
+                    return []
+                elif missing_channel_behavior == "fix":
+                    raise NotImplementedError
+            obs = df_in.iloc[:-prediction_timestep]
+            pre = df_out.iloc[observe_timestep:]
         return [(obs, pre)]
     elif ext == ".txt":
         op = []
