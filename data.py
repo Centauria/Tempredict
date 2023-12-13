@@ -19,7 +19,8 @@ def dataset(
     if ext == ".mf4":
         with MDF(filename) as f:
             ch = set(f.channels_db.keys())
-            if ch.issuperset(observe_channels) and ch.issuperset(prediction_channels):
+            ch_req = set(observe_channels).union(prediction_channels)
+            if ch.issuperset(ch_req):
                 df_in = f.to_dataframe(
                     observe_channels, raster="Temp_MotorMagnetAve"
                 ).reindex(columns=observe_channels)
@@ -28,13 +29,23 @@ def dataset(
                 ).reindex(columns=prediction_channels)
             else:
                 if missing_channel_behavior == "discard":
-                    diff_ch = ch.difference(
-                        set(observe_channels).union(prediction_channels)
+                    print(
+                        f"{filename} have no channel named {ch_req.difference(ch)}, ignored"
                     )
-                    print(f"{filename} have no channel named {diff_ch}, ignored")
                     return []
                 elif missing_channel_behavior == "fix":
-                    raise NotImplementedError
+                    ch_diff_in = set(observe_channels).difference(ch)
+                    ch_diff_out = set(prediction_channels).difference(ch)
+                    ch_in = [c for c in observe_channels if c not in ch_diff_in]
+                    ch_out = [c for c in prediction_channels if c not in ch_diff_out]
+                    df_in = f.to_dataframe(ch_in, raster="Temp_MotorMagnetAve")
+                    df_out = f.to_dataframe(ch_out, raster="Temp_MotorMagnetAve")
+                    for c in ch_diff_in:
+                        df_in[c] = 40.0
+                    for c in ch_diff_out:
+                        df_out[c] = 40.0
+                    df_in.reindex(columns=observe_channels)
+                    df_out.reindex(columns=prediction_channels)
             obs = df_in.iloc[:-prediction_timestep]
             pre = df_out.iloc[observe_timestep:]
         return [(obs, pre)]
@@ -50,6 +61,7 @@ def dataset(
                             prediction_channels,
                             observe_timestep,
                             prediction_timestep,
+                            missing_channel_behavior,
                         )
                     )
         return op
@@ -65,11 +77,17 @@ class SerialDataset(Dataset):
         condition_channels,
         observe_timestep=1,
         prediction_timestep=1,
+        missing_channel_behavior="discard",
     ) -> None:
         in_channels = prediction_channels
         out_channels = prediction_channels + condition_channels
         data = dataset(
-            filename, in_channels, out_channels, observe_timestep, prediction_timestep
+            filename,
+            in_channels,
+            out_channels,
+            observe_timestep,
+            prediction_timestep,
+            missing_channel_behavior,
         )
         self.data = None
         self.observe_timestep = observe_timestep

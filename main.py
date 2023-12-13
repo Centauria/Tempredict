@@ -43,6 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("--mlp-layer-num", type=int, default=2)
     parser.add_argument("--block-num", type=int, default=4)
     parser.add_argument("--cuda", action="store_true")
+    parser.add_argument("--data-fix", action="store_true")
     args = parser.parse_args()
 
     dataset_train = SerialDataset(
@@ -51,6 +52,7 @@ if __name__ == "__main__":
         condition_channels,
         observe_timestep=args.observe_timestep,
         prediction_timestep=args.prediction_timestep,
+        missing_channel_behavior="fix" if args.data_fix else "discard",
     )
     dataset_test = SerialDataset(
         args.test_data,
@@ -58,6 +60,7 @@ if __name__ == "__main__":
         condition_channels,
         observe_timestep=args.observe_timestep,
         prediction_timestep=args.prediction_timestep,
+        missing_channel_behavior="fix" if args.data_fix else "discard",
     )
 
     print(len(dataset_train), len(dataset_test))

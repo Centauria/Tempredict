@@ -161,9 +161,17 @@ if __name__ == "__main__":
 
     channels = prediction_channels + condition_channels
     with MDF(args.record_file) as f:
-        df = f.to_dataframe(channels, raster="Temp_MotorMagnetAve").reindex(
-            columns=channels
-        )
+        diff_ch = set(channels).difference(f.channels_db.keys())
+        if len(diff_ch) == 0:
+            df = f.to_dataframe(channels, raster="Temp_MotorMagnetAve").reindex(
+                columns=channels
+            )
+        else:
+            channels_filtered = [c for c in channels if c not in diff_ch]
+            df = f.to_dataframe(channels_filtered, raster="Temp_MotorMagnetAve")
+            for c in diff_ch:
+                df[c] = 40.0
+            df.reindex(columns=channels)
         dfn = df.to_numpy()
 
     app = QApplication()
