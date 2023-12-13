@@ -8,7 +8,7 @@ from tqdm.auto import tqdm
 import torch.utils.data as data
 
 from data import dataset, SerialDataset
-from model.itrans import ITransModel
+from model.itrans_lstm import ITransLSTM
 
 condition_channels = [
     "SPEED",
@@ -92,7 +92,7 @@ if __name__ == "__main__":
         persistent_workers=True,
     )
 
-    model_lightning = ITransModel(
+    model_lightning = ITransLSTM(
         args.observe_timestep,
         args.prediction_timestep,
         len(prediction_channels),
