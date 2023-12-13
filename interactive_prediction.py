@@ -171,7 +171,7 @@ if __name__ == "__main__":
             df = f.to_dataframe(channels_filtered, raster="Temp_MotorMagnetAve")
             for c in diff_ch:
                 df[c] = 40.0
-            df.reindex(columns=channels)
+            df = df.reindex(columns=channels)
         dfn = df.to_numpy()
 
     app = QApplication()

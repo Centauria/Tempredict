@@ -44,8 +44,8 @@ def dataset(
                         df_in[c] = 40.0
                     for c in ch_diff_out:
                         df_out[c] = 40.0
-                    df_in.reindex(columns=observe_channels)
-                    df_out.reindex(columns=prediction_channels)
+                    df_in = df_in.reindex(columns=observe_channels)
+                    df_out = df_out.reindex(columns=prediction_channels)
             obs = df_in.iloc[:-prediction_timestep]
             pre = df_out.iloc[observe_timestep:]
         return [(obs, pre)]
