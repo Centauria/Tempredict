@@ -3,7 +3,11 @@ from typing import Any, Union, Sequence
 import lightning as L
 import torch
 from lightning import Callback
-from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint, LearningRateMonitor
+from lightning.pytorch.callbacks import (
+    EarlyStopping,
+    ModelCheckpoint,
+    LearningRateMonitor,
+)
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 from torch import nn, optim
 
@@ -25,52 +29,39 @@ class ITransLSTM(L.LightningModule):
         lr=1e-4,
     ):
         super().__init__()
-        self.mlp = mlp_layers(mlp_layer_num, input_length, token_dim)
+        self.extract = nn.LSTM(variate_num, lstm_hidden_dim, batch_first=True)
         self.t2v = mlp_layers(mlp_layer_num, predict_length, token_dim)
-        self.itrans_blocks = nn.ModuleList(
-            [ITransformerBlock(variate_num, token_dim, heads) for _ in range(block_num)]
-        )
         self.itrans_blocks_z = nn.ModuleList(
-            [ITransformerBlock(condition_num, token_dim, heads) for _ in range(block_num)]
+            [
+                ITransformerBlock(condition_num, token_dim, heads)
+                for _ in range(block_num)
+            ]
         )
-        self.lstm = nn.LSTM(variate_num, lstm_hidden_dim, batch_first=True)
-        self.c2v = mlp_layers(mlp_layer_num, condition_num, lstm_hidden_dim)
-        self.mlp_reduce = mlp_layers(mlp_layer_num, lstm_hidden_dim, variate_num)
-        self.mlp_out = mlp_layers(mlp_layer_num, token_dim, predict_length, output_activation=None)
+        self.v2t = mlp_layers(mlp_layer_num, token_dim, predict_length)
+        self.lstm = nn.LSTM(
+            condition_num, lstm_hidden_dim, proj_size=variate_num, batch_first=True
+        )
         self.criterion = nn.MSELoss()
         self.lr = lr
         self.save_hyperparameters()
 
     def forward(self, x, z):
         # x: (batch, T, N)
+        hidden_size = (1, x.shape[0], x.shape[2])
+        _, (_, x) = self.extract(x)
+        # x: (1, batch, H)
         # z: (batch, S, M)
-        x = x.transpose(1, 2)
         z = z.transpose(1, 2)
-        # x: (batch, N, T)
         # z: (batch, M, S)
-        x = self.mlp(x)
         z = self.t2v(z)
-        # x: (batch, N, D)
         # z: (batch, M, D)
-        for block in self.itrans_blocks:
-            x = block(x)
         for block in self.itrans_blocks_z:
             z = block(z)
-        # x: (batch, N, D)
         # z: (batch, M, D)
-        x = x.transpose(1, 2)
+        z = self.v2t(z)
         z = z.transpose(1, 2)
-        # x: (batch, D, N)
-        # z: (batch, D, M)
-        z = self.c2v(z)
-        # z: (batch, D, H)
-        z = z.mean(dim=1, keepdim=False).unsqueeze(0)
-        # z: (1, batch, H)
-        x, (h, c) = self.lstm(x, (torch.zeros_like(z), z))
-        # x: (batch, D, H)
-        x = self.mlp_reduce(x).transpose(1, 2)
-        # x: (batch, N, D)
-        x = self.mlp_out(x).transpose(1, 2)
+        # z: (batch, S, M)
+        x, _ = self.lstm(z, (torch.zeros(hidden_size), x))
         # x: (batch, S, N)
         return x
 
