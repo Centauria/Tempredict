@@ -41,14 +41,27 @@ class ITransLSTM(L.LightningModule):
         self.lstm = nn.LSTM(
             condition_num, lstm_hidden_dim, proj_size=variate_num, batch_first=True
         )
+        self.memory = nn.Parameter(
+            torch.zeros(lstm_hidden_dim, dtype=torch.float32, device=self.device),
+            requires_grad=False,
+        )
         self.criterion = nn.MSELoss()
         self.lr = lr
         self.save_hyperparameters()
 
     def forward(self, x, z):
         # x: (batch, T, N)
-        hidden_size = (1, x.shape[0], x.shape[2])
-        _, (_, x) = self.extract(x)
+        h1 = torch.zeros(
+            (1, x.shape[0], self.memory.shape[0]),
+            dtype=torch.float32,
+            device=self.device,
+        )
+        h2 = torch.zeros(
+            (1, x.shape[0], x.shape[2]),
+            dtype=torch.float32,
+            device=self.device,
+        )
+        _, (_, x) = self.extract(x, (h1, self.memory.repeat(1, x.shape[0], 1)))
         # x: (1, batch, H)
         # z: (batch, S, M)
         z = z.transpose(1, 2)
@@ -61,8 +74,10 @@ class ITransLSTM(L.LightningModule):
         z = self.v2t(z)
         z = z.transpose(1, 2)
         # z: (batch, S, M)
-        x, _ = self.lstm(z, (torch.zeros(hidden_size, device=self.device), x))
+        x, (_, c) = self.lstm(z, (h2, x))
         # x: (batch, S, N)
+        # c: (1, batch, H)
+        self.memory.data = c.mean(dim=(0, 1))
         return x
 
     def training_step(
