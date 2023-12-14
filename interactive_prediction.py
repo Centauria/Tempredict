@@ -15,10 +15,11 @@ import lightning as L
 
 from main import condition_channels, prediction_channels
 from model.itrans import ITransModel
+from model.itrans_lstm import ITransLSTM
 
 
 class WaveChart(QChart):
-    def __init__(self, data, net: Union[ITransModel, ncnn.Net]):
+    def __init__(self, data, net: Union[ncnn.Net, ITransModel, ITransLSTM]):
         super().__init__()
 
         # 显示的时间范围
@@ -74,7 +75,7 @@ class WaveChart(QChart):
         if self.n + int(self.t_range * 10) < self.data.shape[0]:
             if isinstance(self.net, ncnn.Net):
                 f = predict_ncnn
-            elif isinstance(self.net, ITransModel):
+            else:
                 f = predict
             pred = f(
                 self.data[self.n, :3].reshape(1, 3),
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         net.load_param(str(param_file))
         net.load_model(str(bin_file))
     elif args.ckpt_file is not None:
-        net = ITransModel.load_from_checkpoint(args.ckpt_file, map_location="cpu")
+        net = ITransLSTM.load_from_checkpoint(args.ckpt_file, map_location="cpu")
         net.eval()
     else:
         raise argparse.ArgumentError(
