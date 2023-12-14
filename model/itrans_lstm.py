@@ -61,7 +61,7 @@ class ITransLSTM(L.LightningModule):
         z = self.v2t(z)
         z = z.transpose(1, 2)
         # z: (batch, S, M)
-        x, _ = self.lstm(z, (torch.zeros(hidden_size), x))
+        x, _ = self.lstm(z, (torch.zeros(hidden_size, device=self.device), x))
         # x: (batch, S, N)
         return x
 
