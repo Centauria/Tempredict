@@ -19,12 +19,15 @@ from model.itrans_lstm import ITransLSTM
 
 
 class WaveChart(QChart):
-    def __init__(self, data, net: Union[ncnn.Net, ITransModel, ITransLSTM]):
+    def __init__(
+        self, data, net: Union[ncnn.Net, ITransModel, ITransLSTM], history_samples=9
+    ):
         super().__init__()
 
         # 显示的时间范围
         self.t_range = 30
         self.sample_time = 0.1
+        self.history_samples = history_samples
 
         self.data = data
         self.net = net
@@ -67,7 +70,7 @@ class WaveChart(QChart):
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.handleTimeout)
-        self.timer.start(50)
+        self.timer.start(25)
 
         self.resize(800, 500)
 
@@ -77,8 +80,9 @@ class WaveChart(QChart):
                 f = predict_ncnn
             else:
                 f = predict
+            head = self.n - self.history_samples if self.n > self.history_samples else 0
             pred = f(
-                self.data[self.n, :3].reshape(1, 3),
+                self.data[head : self.n + 1, :3],
                 self.data[self.n + 1 : self.n + 101, 3:],
                 self.net,
             )
